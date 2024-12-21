@@ -5,6 +5,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 def main():
+    # TODO consider https://jsonargparse.readthedocs.io/en/stable/#sub-commands
     parser = configargparse.ArgumentParser(
     description="Splunklib interface using configargparse",
     default_config_files=['splunkapi.ini'],  # Specify default config file
@@ -13,6 +14,7 @@ def main():
     parser.add_argument('--host', env_var='SPLUNK_HOST', type=str, help='Splunk Host Name or IP', default="localhost")
     parser.add_argument('--user', env_var='SPLUNK_USER', type=str, help='Splunk Username', default="admin")
     parser.add_argument('--password', env_var='SPLUNK_PASS', type=str, help='Splunk Password')
+    parser.add_argument('--function', type=str, help='REST API Function')
 
     args = parser.parse_args()
 
@@ -26,9 +28,16 @@ def main():
     if not args.password:
         print('Splunk password not set.')
         args.password = getpass.getpass('Please enter admin password, will not be echoed: ')
+    if not args.function:
+        print('REST API function not called.')
+        args.function = input("Please enter function to call, see help for help: ")
     
+    # Always start by retrieving the session key
     get_session_key(args)
-    get_serverclasses(args, session_key)
+    # Map input to function name safely
+    func = globals()[ args.function ]
+    print( f'Found local function {func}' )
+    func(args,session_key)
     return args
    
 def get_session_key(args):
@@ -46,35 +55,35 @@ def get_serverclasses(args, sessionkey):
         data={}, verify=False)
     pprint("Serverclasses: " + r.text)
 
-def get_deploymentapps():
+def get_deploymentapps(args, sessionkey):
     # Output Existing DeploymentApps
     r = requests.get("https://" + args.host + ":8089" + "/services/deployment/server/applications",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={}, verify=False)
     pprint("Applications: " + r.text)
 
-def create_serverclass():
+def create_serverclass(args, sessionkey):
     # Create a New Serverclass
     r = requests.post("https://" + args.host + ":8089" + "/services/deployment/server/serverclasses",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={"name": "Splunk_TA_nix"}, verify=False)
     pprint("New Serverclass: " + r.text)
 
-def add_serverclass_to_app():
+def add_serverclass_to_app(args, sessionkey):
     # Add Serverclass to App
     r = requests.post("https://" + args.host + ":8089" + "/servicesNS/nobody/system/deployment/server/applications/Splunk_TA_nix",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={"serverclass": "Splunk_TA_nix"}, verify=False)
     pprint("App Added: " + r.text)
 
-def reload_deploymentserver():
+def reload_deploymentserver(args, sessionkey):
     # Reload Deployment Server
     r = requests.post("https://" + args.host + ":8089" + "/services/deployment/server/config/_reload",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={}, verify=False)
     pprint("Deployment Server Reloaded: " + r.text)
 
-def add_host_to_serverclass():
+def add_host_to_serverclass(args, sessionkey):
     # Add host(s) to Serverclass, note this endpoint can change, TODO pull this from the output above
     # /servicesNS/nobody/search/deployment/server/serverclasses/Splunk_TA_nix
     # /servicesNS/nobody/system/deployment/server/serverclasses/Splunk_TA_nix
