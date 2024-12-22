@@ -45,10 +45,8 @@ def main():
         args.password = getpass.getpass('Please enter admin password, will not be echoed: ')
     # Always start by retrieving the session key
     get_session_key(args)
-    print(session_key)
     # Map input to function name safely
     func = globals()[ args.subcommand ]
-    print( f'Found local function {func}' )
     func(args,session_key)
 
 def get_session_key(args):
