@@ -1,20 +1,35 @@
-import os, sys, configargparse, getpass, requests, json
+import os, sys, getpass, requests, json
+from jsonargparse import ArgumentParser
 from xml.dom import minidom
 from pprint import pprint
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 def main():
-    # TODO consider https://jsonargparse.readthedocs.io/en/stable/#sub-commands
-    parser = configargparse.ArgumentParser(
-    description="Splunklib interface using configargparse",
-    default_config_files=['splunkapi.ini'],  # Specify default config file
+    # Main parser
+    parser = ArgumentParser(prog="splunkapi",
+    env_prefix="SPLUNK", default_env=True,
+    description="Splunk API interface using jsonargparse",
+    default_config_files=['splunkapi.yaml'],  # Specify default config file
     )
+    # We need individual subcommand parsers here for specific arguments
+    parser_get_serverclasses    = ArgumentParser()
+    parser_get_deploymentapps   = ArgumentParser()
 
-    parser.add_argument('--host', env_var='SPLUNK_HOST', type=str, help='Splunk Host Name or IP', default="localhost")
-    parser.add_argument('--user', env_var='SPLUNK_USER', type=str, help='Splunk Username', default="admin")
-    parser.add_argument('--password', env_var='SPLUNK_PASS', type=str, help='Splunk Password')
-    parser.add_argument('--function', type=str, help='REST API Function')
+    # export SPLUNKAPI_CREATE_SERVERCLASS_SERVERCLASS=name # to set subcommand argument
+    parser_create_serverclass   = ArgumentParser(env_prefix="SPLUNK", default_env=True)
+    parser_create_serverclass.add_argument("--serverclass", type=str, help='Serverclass to Add')
+
+    # Main parser global args
+    parser.add_argument("--host", type=str, help='Splunk Host Name or IP', default="localhost")
+    parser.add_argument("--user", type=str, help='Splunk Username', default="admin")
+    parser.add_argument("--password", type=str, help='Splunk Password')
+    
+    # Add all subcommands, include their parsers
+    subcommands = parser.add_subcommands()
+    subcommands.add_subcommand("create_serverclass", parser_create_serverclass)
+    subcommands.add_subcommand("get_serverclasses", parser_get_serverclasses)
+    subcommands.add_subcommand("get_deploymentapps", parser_get_deploymentapps)
 
     args = parser.parse_args()
 
@@ -28,18 +43,14 @@ def main():
     if not args.password:
         print('Splunk password not set.')
         args.password = getpass.getpass('Please enter admin password, will not be echoed: ')
-    if not args.function:
-        print('REST API function not called.')
-        args.function = input("Please enter function to call, see help for help: ")
-    
     # Always start by retrieving the session key
     get_session_key(args)
+    print(session_key)
     # Map input to function name safely
-    func = globals()[ args.function ]
+    func = globals()[ args.subcommand ]
     print( f'Found local function {func}' )
     func(args,session_key)
-    return args
-   
+
 def get_session_key(args):
     # First we login with user/pass and get a session key then append that header to all following requests
     r = requests.get("https://" + args.host + ":8089" + "/services/auth/login",
@@ -63,10 +74,10 @@ def get_deploymentapps(args, sessionkey):
     pprint("Applications: " + r.text)
 
 def create_serverclass(args, sessionkey):
-    # Create a New Serverclass
+    # Create a New Serverclass using subcommand args
     r = requests.post("https://" + args.host + ":8089" + "/services/deployment/server/serverclasses",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
-        data={"name": "Splunk_TA_nix"}, verify=False)
+        data={"name": args.create_serverclass.serverclass}, verify=False)
     pprint("New Serverclass: " + r.text)
 
 def add_serverclass_to_app(args, sessionkey):
