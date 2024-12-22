@@ -13,16 +13,29 @@ def main():
     default_config_files=['splunkapi.yaml'],  # Specify default config file
     )
     # We need individual subcommand parsers here for specific arguments
-    parser_get_serverclasses    = ArgumentParser()
-    parser_get_deploymentapps   = ArgumentParser()
+    parser_get_serverclasses        = ArgumentParser()
+    parser_get_deploymentapps       = ArgumentParser()
+    parser_reload_deploymentserver  = ArgumentParser()
 
     # export SPLUNKAPI_CREATE_SERVERCLASS_SERVERCLASS=name # to set subcommand argument
-    parser_create_serverclass   = ArgumentParser(env_prefix="SPLUNK", default_env=True)
+    parser_create_serverclass       = ArgumentParser(env_prefix="SPLUNK", default_env=True)
     parser_create_serverclass.add_argument("--serverclass", type=str, help='Serverclass to Add')
 
+    parser_add_serverclass_to_app   = ArgumentParser(env_prefix="SPLUNK", default_env=True)
+    parser_add_serverclass_to_app.add_argument("--serverclass", type=str, help='Serverclass to Add to App')
+    parser_add_serverclass_to_app.add_argument("--app", type=str, help='App to Add Serverclass To')
+
+    parser_add_host_to_serverclass  = ArgumentParser(env_prefix="SPLUNK", default_env=True)
+    parser_add_host_to_serverclass.add_argument("--serverclass", type=str, help='Serverclass to Add Client')
+    parser_add_host_to_serverclass.add_argument("--client", type=str, help='Client Name or Glob')
+    parser_add_host_to_serverclass.add_argument("--list", type=str, help='Whitelist or Blacklist with Int', default="whitelist.0")
+
     # Main parser global args
+    # export SPLUNK_HOST=hostname_or_ip
     parser.add_argument("--host", type=str, help='Splunk Host Name or IP', default="localhost")
+    # export SPLUNK_USER=admin_username
     parser.add_argument("--user", type=str, help='Splunk Username', default="admin")
+    # export SPLUNK_PASSWORD=admin_password
     parser.add_argument("--password", type=str, help='Splunk Password')
     
     # Add all subcommands, include their parsers
@@ -30,6 +43,9 @@ def main():
     subcommands.add_subcommand("create_serverclass", parser_create_serverclass)
     subcommands.add_subcommand("get_serverclasses", parser_get_serverclasses)
     subcommands.add_subcommand("get_deploymentapps", parser_get_deploymentapps)
+    subcommands.add_subcommand("add_serverclass_to_app", parser_add_serverclass_to_app)
+    subcommands.add_subcommand("reload_deploymentserver", parser_reload_deploymentserver)
+    subcommands.add_subcommand("add_host_to_serverclass", parser_add_host_to_serverclass)
 
     args = parser.parse_args()
 
@@ -80,9 +96,10 @@ def create_serverclass(args, sessionkey):
 
 def add_serverclass_to_app(args, sessionkey):
     # Add Serverclass to App
-    r = requests.post("https://" + args.host + ":8089" + "/servicesNS/nobody/system/deployment/server/applications/Splunk_TA_nix",
+    # python splunkapi.py add_serverclass_to_app --serverclass Splunk_TA_nix --app Splunk_TA_nix
+    r = requests.post("https://" + args.host + ":8089" + "/servicesNS/nobody/system/deployment/server/applications/" + args.add_serverclass_to_app.app,
         headers = { 'Authorization': ('Splunk %s' %session_key)},
-        data={"serverclass": "Splunk_TA_nix"}, verify=False)
+        data={"serverclass": args.add_serverclass_to_app.serverclass}, verify=False)
     pprint("App Added: " + r.text)
 
 def reload_deploymentserver(args, sessionkey):
@@ -96,9 +113,10 @@ def add_host_to_serverclass(args, sessionkey):
     # Add host(s) to Serverclass, note this endpoint can change, TODO pull this from the output above
     # /servicesNS/nobody/search/deployment/server/serverclasses/Splunk_TA_nix
     # /servicesNS/nobody/system/deployment/server/serverclasses/Splunk_TA_nix
-    r = requests.post("https://" + args.host + ":8089" + "/servicesNS/nobody/search/deployment/server/serverclasses/Splunk_TA_nix",
+    # python splunkapi.py add_host_to_serverclass --serverclass Splunk_TA_nix --client "splunk-hf-*"
+    r = requests.post("https://" + args.host + ":8089" + "/servicesNS/nobody/search/deployment/server/serverclasses/" + args.add_host_to_serverclass.serverclass,
         headers = { 'Authorization': ('Splunk %s' %session_key)},
-        data={"whitelist.0": "splunk-hf-*"}, verify=False)
+        data={args.add_host_to_serverclass.list : args.add_host_to_serverclass.client }, verify=False)
     pprint("Add Host: " + r.text)
 
 if __name__ == '__main__':
