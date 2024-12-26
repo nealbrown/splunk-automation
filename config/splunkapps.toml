@@ -1,0 +1,12 @@
+[app]
+    [app.Splunk_TA_nix]
+    name = "Splunk_TA_nix"
+    filename = "splunk-add-on-for-unix-and-linux_920.tgz"
+
+    [app.Splunk_TA_aws]
+    name = "Splunk_TA_aws"
+    filename = "splunk-add-on-for-amazon-web-services-aws_780.tgz"
+
+    [app.Splunk_TA_windows]
+    name = "Splunk_TA_windows"
+    filename = "splunk-add-on-for-microsoft-windows_901.tgz"

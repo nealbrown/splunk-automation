@@ -1,4 +1,4 @@
-import os, sys, getpass, requests, json
+import os, sys, getpass, requests, json, toml
 from jsonargparse import ArgumentParser
 from xml.dom import minidom
 from pprint import pprint
@@ -59,6 +59,7 @@ def main():
     if not args.password:
         print('Splunk password not set.')
         args.password = getpass.getpass('Please enter admin password, will not be echoed: ')
+    
     # Always start by retrieving the session key
     get_session_key(args)
     # Map input to function name safely
