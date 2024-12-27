@@ -1,5 +1,6 @@
 # fab --list
 # fab --hosts splunk install-TA-nix
+# fab --hosts splunk install-deployment-apps
 
 from __future__ import with_statement
 import os, sys, re, difflib, getpass, tomllib, config

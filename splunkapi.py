@@ -1,3 +1,15 @@
+# export SPLUNK_PASSWORD=changeme
+# To add or manage individual apps or serverclasses call the subcommand with its required flags
+# 
+# To populate a deployment server first ensure the inventory in config/splunkapps.toml is complete 
+# and that the app tgz's are present on the path specified
+# 
+# Install the apps via the accompanying fabfile
+# then run
+# python splunkapi.py create_all_serverclasses
+# python splunkapi.py add_all_serverclasses_to_app
+# python splunkapi.py add_hosts_to_serverclasses
+
 import os, sys, getpass, requests, json, tomllib, config
 from jsonargparse import ArgumentParser
 from xml.dom import minidom
@@ -14,10 +26,10 @@ def main():
     default_config_files=['splunkapi.yaml'],  # Specify default config file
     )
     # We need individual subcommand parsers here for specific arguments
-    parser_get_serverclasses        = ArgumentParser()
-    parser_get_deploymentapps       = ArgumentParser()
-    parser_reload_deploymentserver  = ArgumentParser()
-    parser_create_all_serverclasses = ArgumentParser()
+    parser_get_serverclasses            = ArgumentParser()
+    parser_get_deploymentapps           = ArgumentParser()
+    parser_reload_deploymentserver      = ArgumentParser()
+    parser_create_all_serverclasses     = ArgumentParser()
     parser_add_all_serverclasses_to_app = ArgumentParser()
 
     # export SPLUNKAPI_CREATE_SERVERCLASS_SERVERCLASS=name # to set subcommand argument
@@ -32,6 +44,9 @@ def main():
     parser_add_host_to_serverclass.add_argument("--serverclass", type=str, help='Serverclass to Add Client')
     parser_add_host_to_serverclass.add_argument("--client", type=str, help='Client Name or Glob')
     parser_add_host_to_serverclass.add_argument("--list", type=str, help='Whitelist or Blacklist with Int', default="whitelist.0")
+    
+    parser_add_hosts_to_serverclasses  = ArgumentParser(env_prefix="SPLUNK", default_env=True)
+    parser_add_hosts_to_serverclasses.add_argument("--list", type=str, help='Whitelist or Blacklist with Int', default="whitelist.0")
 
     # Main parser global args
     # export SPLUNK_HOST=hostname_or_ip
@@ -51,6 +66,7 @@ def main():
     subcommands.add_subcommand("add_host_to_serverclass", parser_add_host_to_serverclass)
     subcommands.add_subcommand("create_all_serverclasses", parser_create_all_serverclasses)
     subcommands.add_subcommand("add_all_serverclasses_to_app", parser_add_all_serverclasses_to_app)
+    subcommands.add_subcommand("add_hosts_to_serverclasses", parser_add_hosts_to_serverclasses)
 
     args = parser.parse_args()
 
@@ -141,6 +157,17 @@ def add_host_to_serverclass(args, sessionkey):
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={args.add_host_to_serverclass.list : args.add_host_to_serverclass.client }, verify=False)
     pprint("Add Host: " + r.text)
+
+def add_hosts_to_serverclasses(args, sessionkey):
+    # Add host(s) to Serverclass, note this endpoint can change, TODO pull this from the output above
+    # /servicesNS/nobody/search/deployment/server/serverclasses/Splunk_TA_nix
+    # /servicesNS/nobody/system/deployment/server/serverclasses/Splunk_TA_nix
+    # python splunkapi.py add_hosts_to_serverclasses
+    for pkg in apps['app']:
+        r = requests.post("https://" + args.host + ":8089" + "/servicesNS/nobody/search/deployment/server/serverclasses/" + pkg,
+            headers = { 'Authorization': ('Splunk %s' %session_key)},
+            data={args.add_hosts_to_serverclasses.list : {(apps['app'][pkg]['servers'])} }, verify=False)
+        pprint("Add Host: " + r.text)
 
 if __name__ == '__main__':
     main()
