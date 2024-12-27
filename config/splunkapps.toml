@@ -1,3 +1,5 @@
+aws_s3_bucket = "s3://splunk-apps-2024123456789"
+
 [app]
     [app.Splunk_TA_nix]
     name = "Splunk_TA_nix"
