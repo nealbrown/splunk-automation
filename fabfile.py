@@ -44,3 +44,17 @@ def install_deployment_apps(c):
             c.sudo(f'chown splunk:splunk /opt/splunk/etc/deployment-apps/{pkg} ', hide='both', pty=True, watchers=[sudopass]) # Hide redundant sudo prompt
         else:
             print(f"App {pkg} found already installed in deployment-apps.")
+
+@task
+# fab -H localhost:2222 install-deployment-apps-from-s3 to use existing SSM tunnel
+def install_deployment_apps_from_s3(c):
+    for pkg in apps['app']:
+        if c.run(f'test -d /opt/splunk/etc/deployment-apps/{pkg}', warn=True).failed:
+            print(f"{pkg} not found in deployment-apps.")
+            print(f"Retrieving {pkg} from {(apps['aws_s3_bucket'])}/deployment-apps/{(apps['app'][pkg]['filename'])}.")
+            c.sudo(f'aws s3 cp --region us-east-1 {(apps['aws_s3_bucket'])}/deployment-apps/{(apps['app'][pkg]['filename'])} /tmp/', pty=False)
+            c.sudo(f'tar -C /opt/splunk/etc/deployment-apps -xzf /tmp/{(apps['app'][pkg]['filename'])}', pty=False)
+            print(f"App {pkg} Installed in deployment-apps.")
+            c.sudo(f'chown splunk:splunk /opt/splunk/etc/deployment-apps/{pkg}', pty=False)
+        else:
+            print(f"App {pkg} found already installed in deployment-apps.")
