@@ -1,7 +1,8 @@
-import os, sys, getpass, requests, json, toml
+import os, sys, getpass, requests, json, tomllib, config
 from jsonargparse import ArgumentParser
 from xml.dom import minidom
 from pprint import pprint
+from config import splunkapps as apps
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -16,6 +17,8 @@ def main():
     parser_get_serverclasses        = ArgumentParser()
     parser_get_deploymentapps       = ArgumentParser()
     parser_reload_deploymentserver  = ArgumentParser()
+    parser_create_all_serverclasses = ArgumentParser()
+    parser_add_all_serverclasses_to_app = ArgumentParser()
 
     # export SPLUNKAPI_CREATE_SERVERCLASS_SERVERCLASS=name # to set subcommand argument
     parser_create_serverclass       = ArgumentParser(env_prefix="SPLUNK", default_env=True)
@@ -46,6 +49,8 @@ def main():
     subcommands.add_subcommand("add_serverclass_to_app", parser_add_serverclass_to_app)
     subcommands.add_subcommand("reload_deploymentserver", parser_reload_deploymentserver)
     subcommands.add_subcommand("add_host_to_serverclass", parser_add_host_to_serverclass)
+    subcommands.add_subcommand("create_all_serverclasses", parser_create_all_serverclasses)
+    subcommands.add_subcommand("add_all_serverclasses_to_app", parser_add_all_serverclasses_to_app)
 
     args = parser.parse_args()
 
@@ -95,6 +100,14 @@ def create_serverclass(args, sessionkey):
         data={"name": args.create_serverclass.serverclass}, verify=False)
     pprint("New Serverclass: " + r.text)
 
+def create_all_serverclasses(args, sessionkey):
+    # Create a New Serverclass using subcommand args
+    for pkg in apps['app']:
+        r = requests.post("https://" + args.host + ":8089" + "/services/deployment/server/serverclasses",
+            headers = { 'Authorization': ('Splunk %s' %session_key)},
+            data={"name": {pkg}}, verify=False)
+        pprint("New Serverclass: " + r.text)
+
 def add_serverclass_to_app(args, sessionkey):
     # Add Serverclass to App
     # python splunkapi.py add_serverclass_to_app --serverclass Splunk_TA_nix --app Splunk_TA_nix
@@ -102,6 +115,15 @@ def add_serverclass_to_app(args, sessionkey):
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={"serverclass": args.add_serverclass_to_app.serverclass}, verify=False)
     pprint("App Added: " + r.text)
+
+def add_all_serverclasses_to_app(args, sessionkey):
+    # Add Serverclass to App
+    # python splunkapi.py add_all_serverclasses_to_app
+    for pkg in apps['app']:
+        r = requests.post("https://" + args.host + ":8089" + "/servicesNS/nobody/system/deployment/server/applications/" + pkg,
+            headers = { 'Authorization': ('Splunk %s' %session_key)},
+            data={"serverclass": {pkg}}, verify=False)
+        pprint("App Added: " + r.text)
 
 def reload_deploymentserver(args, sessionkey):
     # Reload Deployment Server
