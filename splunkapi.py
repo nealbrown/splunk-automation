@@ -13,7 +13,6 @@
 import os, sys, getpass, requests, json, tomllib, config, typer
 from jsonargparse import ArgumentParser
 from xml.dom import minidom
-from pprint import pprint
 from config import splunkapps as apps
 from rich import print
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -33,7 +32,7 @@ def main():
     default_config_files=['splunkapi.yaml'],  # Specify default config file
     )
     # We need individual subcommand parsers here for specific arguments
-    parser_get_serverclasses            = ArgumentParser()
+    # parser_get_serverclasses            = ArgumentParser()
     # parser_get_deploymentapps           = ArgumentParser()
     # parser_reload_deploymentserver      = ArgumentParser()
     # parser_create_all_serverclasses     = ArgumentParser()
