@@ -7,45 +7,48 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 app = typer.Typer()
-sessionkey_app = typer.Typer()
-app.add_typer(sessionkey_app, name="sessionkey", help="Retrieve Sessionkey for API Auth")
-serverclass_app = typer.Typer()
-app.add_typer(serverclass_app, name="serverclass", help="Retrieve and Manage Serverclasses ")
+serverclasses_app = typer.Typer()
+app.add_typer(serverclasses_app, name="serverclasses")
 
-@sessionkey_app.command()
-def get_session_key(
+@serverclasses_app.command("get-serverclasses")
+def get_serverclasses( 
+    host: Annotated[
+        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+    ):
+    """
+    Output Existing Serverclasses
+    """
+    print(f"Retrieving Serverclasses on {host}")
+    r = requests.get("https://" + host + ":8089" + "/services/deployment/server/serverclasses",
+        headers = { 'Authorization': ('Splunk %s' %session_key)},
+        data={}, verify=False)
+    print("Serverclasses: " + r.text)
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
     password: Annotated[
         str,typer.Option(envvar="SPLUNK_PASSWORD", prompt=True, hide_input=True)
         ],
     host: Annotated[
-        str, typer.Argument(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
     user: Annotated[
-        str, typer.Argument(envvar="SPLUNK_USER")] = "admin", 
+        str, typer.Option(envvar="SPLUNK_USER")] = "admin", 
     ):
     """
-    Retrieve and return sessionkey to use for API auth
+    First we retrieve and return a sessionkey to use for API auth prior to running a subcommand.
+    Then each subcommand can operate on applications or serverclasses as specified in their individual descriptions.
     """
     r = requests.get("https://" + host + ":8089" + "/services/auth/login",
         data={'username':user,'password':password}, verify=False)
     global session_key
     session_key = minidom.parseString(r.text).getElementsByTagName('sessionKey')[0].firstChild.nodeValue
     if session_key:
-        print(f"Retrieved sessionkey: {session_key}") 
+        print(f"Retrieved api auth sessionkey: {session_key}") 
     else:
         raise typer.Exit(code=1)
-
-@serverclass_app.command()
-def get_serverclasses( 
-    host: Annotated[
-        str, typer.Argument(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
-    ):
-    """
-    Output Existing Serverclasses
-    """
-    r = requests.get("https://" + host + ":8089" + "/services/deployment/server/serverclasses",
-        headers = { 'Authorization': ('Splunk %s' %session_key)},
-        data={}, verify=False)
-    print("Serverclasses: " + r.text)
+    if ctx.invoked_subcommand is None:
+        print("No further command specified. Session key will expire in 60 minutes.")
 
 if __name__ == "__main__":
     app()
