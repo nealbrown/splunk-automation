@@ -1,3 +1,15 @@
+# export SPLUNK_PASSWORD=changeme
+# To add or manage individual apps or serverclasses call the subcommand with its required flags
+# 
+# To populate a deployment server first ensure the inventory in config/splunkapps.toml is complete 
+# and that the app tgz's are present on the path specified
+# 
+# Install the apps via the accompanying fabfile
+# then run
+# python main.py serverclass create-all-serverclasses
+# python main.py serverclass add-hosts-to-serverclasses
+# python main.py deploymentapps add-all-serverclasses-to-app
+
 import typer, requests, config
 from rich import print
 from xml.dom import minidom
@@ -6,11 +18,25 @@ from config import splunkapps as apps
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+# Create Typers for each function
+# Use pretty_exceptions_show_locals=False to avoid printing password in exceptions
 app = typer.Typer(pretty_exceptions_show_locals=False)
-serverclass_app = typer.Typer(pretty_exceptions_show_locals=False, help="Retrieve and manage serverclasses.")
-deploymentapps_app = typer.Typer(pretty_exceptions_show_locals=False, help="Manage deploymentapps.")
+reload_deploymentserver_app   = typer.Typer(pretty_exceptions_show_locals=False, help="Reload deployment server.")
+serverclass_app               = typer.Typer(pretty_exceptions_show_locals=False, help="Retrieve and manage serverclasses.")
+deploymentapps_app            = typer.Typer(pretty_exceptions_show_locals=False, help="Manage deploymentapps.")
 app.add_typer(serverclass_app, name="serverclass")
 app.add_typer(deploymentapps_app, name="deploymentapps")
+app.add_typer(reload_deploymentserver_app, name="reload_deploymentserver")
+
+# Defaults will be used if ENV VAR not set, except for password which has no default
+default_splunk_host     = "splunk-ds-1" # SPLUNK_HOST
+default_splunk_user     = "admin"       # SPLUNK_USER
+default_splunk_debug    = True          # SPLUNK_DEBUG
+
+# No ENV VAR support
+default_allow_list      = "whitelist.0"
+
+# Note that instead of using typing.List we expect singular arguments unless we are pulling from the toml config file
 
 @app.callback(invoke_without_command=True)
 def main(
@@ -19,11 +45,11 @@ def main(
         str,typer.Option(envvar="SPLUNK_PASSWORD", prompt=True, hide_input=True)
         ],
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
     user: Annotated[
-        str, typer.Option(envvar="SPLUNK_USER")] = "admin", 
+        str, typer.Option(envvar="SPLUNK_USER")] = default_splunk_user, 
     debug: Annotated[
-        bool, typer.Option(envvar="SPLUNK_DEBUG")] = True, 
+        bool, typer.Option(envvar="SPLUNK_DEBUG")] = default_splunk_debug, 
     ):
     """
     Callback to retrieve and return a sessionkey to use for API auth prior to running a subcommand.
@@ -47,10 +73,23 @@ def main(
     if ctx.invoked_subcommand is None:
         print("No further command specified. Session key will expire in 60 minutes.")
 
+@reload_deploymentserver_app.command()
+def reload_deploymentserver(
+    host: Annotated[
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
+    ):
+    """
+    Reload Deployment Server- not necessary in most cases because the API call itself will trigger a reload.
+    """
+    r = requests.post("https://" + host + ":8089" + "/services/deployment/server/config/_reload",
+        headers = { 'Authorization': ('Splunk %s' %session_key)},
+        data={}, verify=False)
+    print("Deployment Server Reloaded: " + r.text)
+
 @serverclass_app.command()
 def get_serverclasses(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
     ):
     """
     Output Existing Serverclasses
@@ -66,7 +105,7 @@ def create_serverclass(
     serverclass: Annotated[
         str, typer.Option()],
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
     ):
     """
     Create a new serverclass.  Requires --serverclass.
@@ -81,7 +120,7 @@ def create_serverclass(
 @serverclass_app.command()
 def create_all_serverclasses(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
     ):
     """
     Create new serverclasses using toml inventory from config dir.
@@ -99,12 +138,12 @@ def add_host_to_serverclass(
     client: Annotated[
         str, typer.Option(help="Client hostname name or glob e.g. splunk-hf-1 or \"splunk-hf-*\"")],
     list: Annotated[
-        str, typer.Option(help="Whitelist or Blacklist with Int e.g. whitelist.0")] = "whitelist.0",    
+        str, typer.Option(help="Whitelist or Blacklist with Int e.g. whitelist.0")] = default_allow_list,    
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
     ):
     """
-    Add host to serverclass.
+    Add client host to serverclass.
     Requires --serverclass and --client, optional --list defaults to 'whitelist.0'
 
     # python main.py serverclass add-host-to-serverclass --serverclass Splunk_TA_nix --client splunk-hf-1
@@ -121,10 +160,34 @@ def add_host_to_serverclass(
         data={list : client }, verify=False)
     print("Add Host: " + r.text)
 
+@serverclass_app.command()
+def add_hosts_to_serverclasses(
+    list: Annotated[
+        str, typer.Option(help="Whitelist or Blacklist with Int e.g. whitelist.0")] = default_allow_list,
+    host: Annotated[
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
+    ):
+    """
+    Add all client hosts to serverclasses using toml inventory from config dir and --list default of whitelist.0
+
+    # python main.py serverclass add-hosts-to-serverclasses
+
+    Note this endpoint can change, TODO pull this from the output above
+
+    /servicesNS/nobody/search/deployment/server/serverclasses/Splunk_TA_nix
+    
+    /servicesNS/nobody/system/deployment/server/serverclasses/Splunk_TA_nix
+    """
+    for pkg in apps['app']:
+        r = requests.post("https://" + host + ":8089" + "/servicesNS/nobody/search/deployment/server/serverclasses/" + pkg,
+            headers = { 'Authorization': ('Splunk %s' %session_key)},
+            data={ list : {(apps['app'][pkg]['servers'])} }, verify=False)
+        print("Add Host: " + r.text)
+
 @deploymentapps_app.command()
 def get_deploymentapps(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
     ):
     """
     Output Existing DeploymentApps
@@ -141,7 +204,7 @@ def add_serverclass_to_app(
     application: Annotated[
         str, typer.Option()],
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1", 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
     ):
     """
     Add Serverclass to App.  
@@ -157,7 +220,7 @@ def add_serverclass_to_app(
 @deploymentapps_app.command()
 def add_all_serverclasses_to_app(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = "splunk-ds-1",
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host,
     ):
     """
     Add Serverclasses to app using toml inventory from config dir.
