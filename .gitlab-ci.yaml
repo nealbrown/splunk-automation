@@ -16,6 +16,8 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
+include: 'https://gitlab.com/gitlab-cd/ssh-template/raw/master/ssh.yml'
+
 stages:          # List of stages for jobs, and their order of execution
   - build
   - test
@@ -46,4 +48,6 @@ deploy-job:      # This job runs in the deploy stage.
   environment: production
   script:
     - echo "Deploying application..."
+    - ssh_run "neal" "gitlab-runner" "$SSH_PRIVATE_KEY" "touch gitlab-ci-success"
     - echo "Application successfully deployed."
+  when: manual
