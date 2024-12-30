@@ -48,6 +48,6 @@ deploy-job:      # This job runs in the deploy stage.
   environment: production
   script:
     - echo "Deploying application..."
-    - ssh_run "neal" "gitlab-runner" "$SSH_PRIVATE_KEY" "touch gitlab-ci-success"
+    - ssh_run "neal" "splunk-ds-1" "$SSH_PRIVATE_KEY" "touch gitlab-ci-success"
     - echo "Application successfully deployed."
   when: manual
