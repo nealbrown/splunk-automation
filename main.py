@@ -10,7 +10,7 @@
 # python main.py serverclass add-hosts-to-serverclasses
 # python main.py deploymentapps add-all-serverclasses-to-app
 
-import typer, requests, config
+import typer, requests, config, toml
 from rich import print
 from xml.dom import minidom
 from typing_extensions import Annotated
