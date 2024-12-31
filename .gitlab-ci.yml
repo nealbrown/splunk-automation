@@ -48,6 +48,7 @@ deploy-job:      # This job runs in the deploy stage.
   environment: production
   script:
     - echo "Deploying application..."
-    - ssh_run "neal" "splunk-ds-1" "$SSH_PRIVATE_KEY" "touch gitlab-ci-success"
+    - pip install -r requirements.txt
+    - python main.py serverclass create-all-serverclasses
     - echo "Application successfully deployed."
   when: manual
