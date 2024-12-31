@@ -52,3 +52,5 @@ deploy-job:      # This job runs in the deploy stage.
     - python main.py serverclass create-all-serverclasses
     - echo "Application successfully deployed."
   when: manual
+  cache:
+    path: none  
