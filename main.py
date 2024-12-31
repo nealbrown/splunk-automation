@@ -11,8 +11,6 @@
 # python main.py deploymentapps add-all-serverclasses-to-app
 
 import typer, requests, config
-try: import tomllib
-except ModuleNotFoundError: import pip._vendor.tomli as tomllib
 from rich import print
 from xml.dom import minidom
 from typing_extensions import Annotated
