@@ -10,7 +10,7 @@
 # python main.py serverclass add-hosts-to-serverclasses
 # python main.py deploymentapps add-all-serverclasses-to-app
 
-import typer, requests, config
+import typer, requests, config, json
 from rich import print
 from xml.dom import minidom
 from typing_extensions import Annotated
@@ -89,7 +89,9 @@ def reload_deploymentserver(
 @serverclass_app.command()
 def get_serverclasses(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host,
+    debug: Annotated[
+        bool, typer.Option(envvar="SPLUNK_DEBUG")] = default_splunk_debug,  
     ):
     """
     Output Existing Serverclasses
@@ -98,7 +100,15 @@ def get_serverclasses(
     r = requests.get("https://" + host + ":8089" + "/services/deployment/server/serverclasses",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={}, verify=False)
-    print("Serverclasses: " + r.text)
+    r.encoding = r.apparent_encoding
+    if r.status_code == requests.codes.ok:
+        if debug:
+            print(f"Debug Output: XML of Serverclasses: {r.text}") 
+        print("Serverclasses Found: ")
+        dom = minidom.parseString(r.text)
+        name = dom.getElementsByTagName('title')
+        for n in name[1:]: # We have to skip the top level "serverclasses" element
+            print(" ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
 
 @serverclass_app.command()
 def create_serverclass(
@@ -187,15 +197,26 @@ def add_hosts_to_serverclasses(
 @deploymentapps_app.command()
 def get_deploymentapps(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host,
+    debug: Annotated[
+        bool, typer.Option(envvar="SPLUNK_DEBUG")] = default_splunk_debug,  
     ):
     """
     Output Existing DeploymentApps
     """
+    print(f"Retrieving DeploymentApps on {host}")
     r = requests.get("https://" + host + ":8089" + "/services/deployment/server/applications",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={}, verify=False)
-    print("Deployment Applications: " + r.text)
+    r.encoding = r.apparent_encoding
+    if r.status_code == requests.codes.ok:
+        if debug:
+            print(f"Debug Output: XML of DeploymentApps: {r.text}") 
+        print("Deployment Applications Found: ")
+        dom = minidom.parseString(r.text)
+        name = dom.getElementsByTagName('title')
+        for n in name[1:]: # We have to skip the top level "applications" element
+            print(" ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
 
 @deploymentapps_app.command()
 def add_serverclass_to_app(
