@@ -10,7 +10,7 @@
 # python main.py serverclass add-hosts-to-serverclasses
 # python main.py deploymentapps add-all-serverclasses-to-app
 
-import typer, requests, config, json
+import typer, requests, config, json, datetime
 from rich import print
 from xml.dom import minidom
 from typing_extensions import Annotated
@@ -84,8 +84,14 @@ def reload_deploymentserver(
     r = requests.post("https://" + host + ":8089" + "/services/deployment/server/config/_reload",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={}, verify=False)
-    print("Deployment Server Reloaded: " + r.text)
-
+    dom = minidom.parseString(r.text)
+    keys = dom.getElementsByTagName('s:key')
+    for n in keys:
+        if n.getAttribute('name') == 'loadTime':
+            loadTime = int(n.childNodes[0].nodeValue)
+            epoch_date_time = str(datetime.datetime.fromtimestamp(loadTime))
+            print("Deployment Server Config Retrieved at: " + epoch_date_time)   
+           
 @serverclass_app.command()
 def get_serverclasses(
     host: Annotated[
