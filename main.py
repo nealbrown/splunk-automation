@@ -80,11 +80,13 @@ def reload_deploymentserver(
     ):
     """
     Reload Deployment Server- not necessary in most cases because the API call itself will trigger a reload.
+
+    Turned out the response doesn't even contain the config refresh time just the current time.
     """
     r = requests.post("https://" + host + ":8089" + "/services/deployment/server/config/_reload",
         headers = { 'Authorization': ('Splunk %s' %session_key)},
         data={}, verify=False)
-    dom = minidom.parseString(r.text)
+    dom = minidom.parseString(r.text) 
     keys = dom.getElementsByTagName('s:key')
     for n in keys:
         if n.getAttribute('name') == 'loadTime':
@@ -110,9 +112,9 @@ def get_serverclasses(
     if r.status_code == requests.codes.ok:
         if debug:
             print(f"Debug Output: XML of Serverclasses: {r.text}") 
-        print("Serverclasses Found: ")
         dom = minidom.parseString(r.text)
         name = dom.getElementsByTagName('title')
+        print("Serverclasses Found: ")
         for n in name[1:]: # We have to skip the top level "serverclasses" element
             print(" ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
 
@@ -136,16 +138,23 @@ def create_serverclass(
 @serverclass_app.command()
 def create_all_serverclasses(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host,  
     ):
     """
     Create new serverclasses using toml inventory from config dir.
     """
     for pkg in apps['app']:
+        print(f"Serverclass {pkg} Loaded From Inventory.")
         r = requests.post("https://" + host + ":8089" + "/services/deployment/server/serverclasses",
             headers = { 'Authorization': ('Splunk %s' %session_key)},
             data={"name": {pkg}}, verify=False)
-        print("New Serverclass: " + r.text)
+        dom = minidom.parseString(r.text)
+        name = dom.getElementsByTagName('title')
+        if name:
+            for n in name[1:]: # We have to skip the top level "serverclasses" element
+                print("Serverclass Created: " + " ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
+        else:
+            print(f"Serverclass Already Exists: {pkg}")
 
 @serverclass_app.command()
 def add_host_to_serverclass(
