@@ -31,7 +31,7 @@ app.add_typer(reload_deploymentserver_app, name="reload_deploymentserver")
 # Defaults will be used if ENV VAR not set, except for password which has no default
 default_splunk_host     = "splunk-ds-1" # SPLUNK_HOST
 default_splunk_user     = "admin"       # SPLUNK_USER
-default_splunk_debug    = True          # SPLUNK_DEBUG
+default_splunk_debug    = False          # SPLUNK_DEBUG
 
 # No ENV VAR support
 default_allow_list      = "whitelist.0"
@@ -144,7 +144,7 @@ def create_all_serverclasses(
     Create new serverclasses using toml inventory from config dir.
     """
     for pkg in apps['app']:
-        print(f"Serverclass {pkg} Loaded From Inventory.")
+        print(f"Serverclass [bold blue]{pkg}[/bold blue] Loaded From Inventory.")
         r = requests.post("https://" + host + ":8089" + "/services/deployment/server/serverclasses",
             headers = { 'Authorization': ('Splunk %s' %session_key)},
             data={"name": {pkg}}, verify=False)
@@ -204,10 +204,16 @@ def add_hosts_to_serverclasses(
     /servicesNS/nobody/system/deployment/server/serverclasses/Splunk_TA_nix
     """
     for pkg in apps['app']:
+        print(f"Serverclass [bold blue]{pkg}[/bold blue] Loaded From Inventory.")
         r = requests.post("https://" + host + ":8089" + "/servicesNS/nobody/search/deployment/server/serverclasses/" + pkg,
             headers = { 'Authorization': ('Splunk %s' %session_key)},
             data={ list : {(apps['app'][pkg]['servers'])} }, verify=False)
-        print("Add Host: " + r.text)
+        dom = minidom.parseString(r.text)
+        name = dom.getElementsByTagName('title')
+        if name:
+            for n in name[1:]: # We have to skip the top level "serverclasses" element
+                # TODO add another loop here to iterate over multiple host globs
+                print(f"Host(s) \'{(apps['app'][pkg]['servers'])}\' [bold]Added to Serverclass[/bold]: " + " ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
 
 @deploymentapps_app.command()
 def get_deploymentapps(
@@ -257,6 +263,8 @@ def add_serverclass_to_app(
 def add_all_serverclasses_to_app(
     host: Annotated[
         str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host,
+    debug: Annotated[
+        bool, typer.Option(envvar="SPLUNK_DEBUG")] = default_splunk_debug, 
     ):
     """
     Add Serverclasses to app using toml inventory from config dir.
@@ -264,10 +272,18 @@ def add_all_serverclasses_to_app(
     # python splunkapi.py add_all_serverclasses_to_app
     """
     for pkg in apps['app']:
+        print(f"Application [bold purple]{pkg}[/bold purple] Loaded From Inventory.")
         r = requests.post("https://" + host + ":8089" + "/servicesNS/nobody/system/deployment/server/applications/" + pkg,
             headers = { 'Authorization': ('Splunk %s' %session_key)},
             data={"serverclass": {pkg}}, verify=False)
-        print("App Added: " + r.text)
-
+        r.encoding = r.apparent_encoding
+        if r.status_code == requests.codes.ok:
+            if debug:
+                print(f"Debug Output: XML of DeploymentApps: {r.text}") 
+        dom = minidom.parseString(r.text)
+        name = dom.getElementsByTagName('title')
+        for n in name[1:]: # We have to skip the top level "applications" element
+            print(f"App Added:" + " ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
+        
 if __name__ == "__main__":
     app()
