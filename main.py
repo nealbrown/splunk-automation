@@ -31,7 +31,7 @@ app.add_typer(deploymentapps_app, name="deploymentapps")
 app.add_typer(reload_deploymentserver_app, name="reload_deploymentserver")
 
 # Defaults will be used if ENV VAR not set, except for password which has no default
-default_splunk_host     = "splunk-ds-1" # SPLUNK_HOST
+default_splunk_host     = "splunk"      # SPLUNK_HOST
 default_splunk_user     = "admin"       # SPLUNK_USER
 default_splunk_debug    = False         # SPLUNK_DEBUG
 
@@ -152,21 +152,24 @@ def create_all_serverclasses(
         # Create our list of allowlist entries
         # TODO add a denylist option
         # TODO improve this dict construction 
-        # We get the serverclass name from the toml file with the index as the key then we reverse the dict
-        servers_from_toml = {k: v for v, k in enumerate(apps['app'][pkg]['servers'])}
-        inv_map_servers = {v: k for k, v in servers_from_toml.items()}
+        # We get the clients to add to the serverclass from the toml file with the index as the key 
+        servers_from_toml = {key: client for client, key in enumerate(apps['app'][pkg]['servers'])}
+        # then we reverse the dict to get the index as the value
+        inv_map_servers = {client: key for key, client in servers_from_toml.items()}
         prefix = "whitelist." # This is the default prefix for allowlists in the Splunk API
+        # We build the allowlist dict from the reversed dict with the prefix required by the API
         allowlists = {prefix + str(key): value for key, value in inv_map_servers.items()}
-        # Prepend the serverclass name to the list of allowlists
+        # Prepend the serverclass name to the dict of allowlists
         data = { "name": pkg } | allowlists
         if debug:
-            print(f"Debug Output: Data to be sent to API: {data}")
+            print(f"Debug Data to be sent to API: {data}")
         r = requests.post("https://" + host + ":8089" + "/services/deployment/server/serverclasses",
             headers = { 'Authorization': ('Splunk %s' %session_key)},
             data = data, verify = False)
         if debug:
-            print(r.request.url)
-            print(r.request.body)
+            print("Debug URL: " + r.request.url)
+            print("Debug Body: " + r.request.body)
+            print("Debug Headers: ")
             print(r.request.headers)
         dom = minidom.parseString(r.text)
         name = dom.getElementsByTagName('title')

@@ -3,7 +3,7 @@
 # fab --hosts splunk install-deployment-apps
 
 from __future__ import with_statement
-import os, sys, re, difflib, getpass, tomllib, config
+import os, sys, re, difflib, getpass, config
 from time import strftime, localtime, sleep
 from invoke import Responder
 from fabric import task, Connection, Config
@@ -46,7 +46,7 @@ def install_deployment_apps(c):
             print(f"App {pkg} found already installed in deployment-apps.")
 
 @task
-# fab -H localhost:2222 install-deployment-apps-from-s3 to use existing SSM tunnel
+# fab -H localhost:2222 install-deployment-apps-from-s3 to use existing SSM tunnel, requires proper auth config in ~/.ssh/config
 def install_deployment_apps_from_s3(c):
     for pkg in apps['app']:
         if c.run(f'test -d /opt/splunk/etc/deployment-apps/{pkg}', warn=True).failed:
