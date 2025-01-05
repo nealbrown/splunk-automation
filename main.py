@@ -7,8 +7,10 @@
 # Install the apps via the accompanying fabfile
 # then run
 # python main.py serverclass create-all-serverclasses
-# python main.py serverclass add-hosts-to-serverclasses
 # python main.py deploymentapps add-all-serverclasses-to-app
+# 
+# To update allowlists for existing serverclasses use
+# python main.py serverclass add-hosts-to-serverclasses
 
 import typer, requests, config, json, datetime
 from rich import print
@@ -158,10 +160,14 @@ def create_all_serverclasses(
         # Prepend the serverclass name to the list of allowlists
         data = { "name": pkg } | allowlists
         if debug:
-            print(data)
+            print(f"Debug Output: Data to be sent to API: {data}")
         r = requests.post("https://" + host + ":8089" + "/services/deployment/server/serverclasses",
             headers = { 'Authorization': ('Splunk %s' %session_key)},
             data = data, verify = False)
+        if debug:
+            print(r.request.url)
+            print(r.request.body)
+            print(r.request.headers)
         dom = minidom.parseString(r.text)
         name = dom.getElementsByTagName('title')
         if name:
@@ -200,14 +206,14 @@ def add_host_to_serverclass(
     print("Add Host: " + r.text)
 
 @serverclass_app.command()
-def add_default_hosts_to_serverclasses(
-    list: Annotated[
-        str, typer.Option(help="Whitelist or Blacklist with Int e.g. whitelist.0")] = default_allow_list,
+def add_hosts_to_serverclasses(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host,
+    debug: Annotated[
+        bool, typer.Option(envvar="SPLUNK_DEBUG")] = default_splunk_debug,   
     ):
     """
-    Add default client hosts to serverclasses using toml inventory from config dir and --list default of whitelist.0
+    Add client hosts to serverclasses using toml inventory from config dir
 
     # python main.py serverclass add-hosts-to-serverclasses
 
@@ -219,15 +225,26 @@ def add_default_hosts_to_serverclasses(
     """
     for pkg in apps['app']:
         print(f"Serverclass [bold blue]{pkg}[/bold blue] Loaded From Inventory.")
-        r = requests.post("https://" + host + ":8089" + "/servicesNS/nobody/search/deployment/server/serverclasses/" + pkg,
+        servers_from_toml = {k: v for v, k in enumerate(apps['app'][pkg]['servers'])}
+        inv_map_servers = {v: k for k, v in servers_from_toml.items()}
+        prefix = "whitelist." # This is the default prefix for allowlists in the Splunk API
+        allowlists = {prefix + str(key): value for key, value in inv_map_servers.items()}
+        # Prepend the serverclass name to the list of allowlists
+        if debug:
+            print(f"Debug Output: Data to be sent to API: {allowlists}")
+        r = requests.post("https://" + host + ":8089" + "/services/deployment/server/serverclasses/" + pkg,
             headers = { 'Authorization': ('Splunk %s' %session_key)},
-            data={ list : {(apps['app'][pkg]['servers'])} }, verify=False)
+            data = allowlists, verify = False)
+        if debug:
+            print(r.request.url)
+            print(r.request.body)
+            print(r.request.headers)
         dom = minidom.parseString(r.text)
         name = dom.getElementsByTagName('title')
         if name:
             for n in name[1:]: # We have to skip the top level "serverclasses" element
                 # TODO add another loop here to iterate over multiple host globs
-                print(f"Host(s) \'{(apps['app'][pkg]['servers'])}\' [bold]Added to Serverclass[/bold]: " + " ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
+                print(f"Host(s) {allowlists} [bold]Added to Serverclass[/bold]: " + " ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
 
 @deploymentapps_app.command()
 def get_deploymentapps(
