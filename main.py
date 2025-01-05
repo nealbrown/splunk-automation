@@ -31,7 +31,7 @@ app.add_typer(reload_deploymentserver_app, name="reload_deploymentserver")
 # Defaults will be used if ENV VAR not set, except for password which has no default
 default_splunk_host     = "splunk-ds-1" # SPLUNK_HOST
 default_splunk_user     = "admin"       # SPLUNK_USER
-default_splunk_debug    = False          # SPLUNK_DEBUG
+default_splunk_debug    = False         # SPLUNK_DEBUG
 
 # No ENV VAR support
 default_allow_list      = "whitelist.0"
@@ -138,16 +138,30 @@ def create_serverclass(
 @serverclass_app.command()
 def create_all_serverclasses(
     host: Annotated[
-        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host,  
+        str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host,
+    debug: Annotated[
+        bool, typer.Option(envvar="SPLUNK_DEBUG")] = default_splunk_debug,  
     ):
     """
     Create new serverclasses using toml inventory from config dir.
     """
     for pkg in apps['app']:
         print(f"Serverclass [bold blue]{pkg}[/bold blue] Loaded From Inventory.")
+        # Create our list of allowlist entries
+        # TODO add a denylist option
+        # TODO improve this dict construction 
+        # We get the serverclass name from the toml file with the index as the key then we reverse the dict
+        servers_from_toml = {k: v for v, k in enumerate(apps['app'][pkg]['servers'])}
+        inv_map_servers = {v: k for k, v in servers_from_toml.items()}
+        prefix = "whitelist." # This is the default prefix for allowlists in the Splunk API
+        allowlists = {prefix + str(key): value for key, value in inv_map_servers.items()}
+        # Prepend the serverclass name to the list of allowlists
+        data = { "name": pkg } | allowlists
+        if debug:
+            print(data)
         r = requests.post("https://" + host + ":8089" + "/services/deployment/server/serverclasses",
             headers = { 'Authorization': ('Splunk %s' %session_key)},
-            data={"name": {pkg}}, verify=False)
+            data = data, verify = False)
         dom = minidom.parseString(r.text)
         name = dom.getElementsByTagName('title')
         if name:
@@ -186,14 +200,14 @@ def add_host_to_serverclass(
     print("Add Host: " + r.text)
 
 @serverclass_app.command()
-def add_hosts_to_serverclasses(
+def add_default_hosts_to_serverclasses(
     list: Annotated[
         str, typer.Option(help="Whitelist or Blacklist with Int e.g. whitelist.0")] = default_allow_list,
     host: Annotated[
         str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
     ):
     """
-    Add all client hosts to serverclasses using toml inventory from config dir and --list default of whitelist.0
+    Add default client hosts to serverclasses using toml inventory from config dir and --list default of whitelist.0
 
     # python main.py serverclass add-hosts-to-serverclasses
 
