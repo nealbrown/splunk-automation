@@ -29,7 +29,7 @@ export SPLUNK_USER=splunkadmin                              # defaults to 'admin
 export SPLUNK_PASSWORD=changeme                             # if not set, will prompt interactively
 fab --hosts splunk install-deployment-apps                  # will copy tgzs from parent dir onto deploymentserver and unpack into deployment-apps
 python main.py serverclass create-all-serverclasses         # creates all serverclasses including allowlists found in config/file.toml default splunkapps.toml
-python main.py deploymentapps add-all-serverclasses-to-app  # add serverclasses to apps under forwarder management
+python main.py deploymentapps add-all-serverclasses-to-app  # add serverclasses to apps under forwarder management on the deployment server
 ```
 Clients that check in will pull their apps based on matching any allowlist (what splunk calls a whitelist) entry
 
