@@ -19,6 +19,22 @@ Splunk Docs on CI/CD (Github)
 
 ***
 
+Usage
+
+On the splunk client host, either a UF or HF: `./splunk set deploy-poll deployment-server.example.com:8089`
+
+```
+export SPLUNK_HOST=deployment-server.example.com
+export SPLUNK_USER=splunkadmin                              # defaults to 'admin'
+export SPLUNK_PASSWORD=changeme                             # if not set, will prompt interactively
+fab --hosts splunk install-deployment-apps                  # will copy tgzs from parent dir onto deploymentserver and unpack into deployment-apps
+python main.py serverclass create-all-serverclasses         # creates all serverclasses including allowlists found in config/file.toml default splunkapps.toml
+python main.py deploymentapps add-all-serverclasses-to-app  # add serverclasses to apps under forwarder management
+```
+Clients that check in will pull their apps based on matching any allowlist entry
+
+***
+
 Note that the Splunk REST API does not create the typical `/opt/splunk/etc/system/local/serverclass.conf` as one would create manually per the docs, but instead `/opt/splunk/etc/apps/search/local/serverclass.conf`:
 
 ```
