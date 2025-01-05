@@ -36,4 +36,6 @@ deploy-job:      # This job runs in the deploy stage.
     - pip install -r requirements.txt
     - python main.py serverclass create-all-serverclasses
     - echo "Serverclasses created successfully."
+    - python main.py deploymentapps add-all-serverclasses-to-app
+    - echo "Serverclasses added to deployment applications successfully."
   when: manual
