@@ -44,7 +44,7 @@ default_allow_list      = "whitelist.0"
 def main(
     ctx: typer.Context,
     password: Annotated[
-        str,typer.Option(envvar="SPLUNK_PASSWORD", prompt=True, hide_input=True)
+        str,typer.Option(envvar="SPLUNK_PASSWORD", prompt="SPLUNK_PASSWORD not set, enter admin password", hide_input=True)
         ],
     host: Annotated[
         str, typer.Option(envvar="SPLUNK_HOST")] = default_splunk_host, 
