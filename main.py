@@ -57,8 +57,7 @@ def main(
     Callback to retrieve and return a sessionkey to use for API auth prior to running a subcommand.
     Then each subcommand can operate on applications or serverclasses as specified in their individual descriptions.
 
-    Required: --host (has default) --user (has default) and --password (no default, will prompt). Optional: --no-debug to hide sessionkey output.
-    
+    Required: --host (has default) --user (has default) and --password (no default, will prompt).
     All can be set via ENV VAR (preferred)
 
     We keep the subcommands in the same process so they can reference the global variable.
