@@ -3,7 +3,8 @@
 # fab --hosts splunk install-deployment-apps
 
 from __future__ import with_statement
-import os, sys, re, difflib, getpass, config
+import getpass, config, pathlib
+from os import path
 from time import strftime, localtime, sleep
 from invoke import Responder
 from fabric import task, Connection, Config
@@ -20,13 +21,13 @@ c = Connection('localhost', config=config)
 @task
 def test_connection(c):
     result = c.run('uname -s', hide='stderr')
-    print(f"Successfully connected to {c.host} running {result.stdout.strip()}.")
+    print(f"Successfully connected to {c.host} as {c.user} running {result.stdout.strip()}.")
 
 @task
 def install_TA_nix(c):
     if c.run('test -d /opt/splunk/etc/deployment-apps/Splunk_TA_nix', warn=True).failed:
         print("Splunk_TA_nix not found.")
-        c.put('../splunk-add-on-for-unix-and-linux_920.tgz', '/tmp')
+        c.put(tgz_path + '/splunk-add-on-for-unix-and-linux_920.tgz', '/tmp')
         c.sudo('tar -C /opt/splunk/etc/deployment-apps -xzf /tmp/splunk-add-on-for-unix-and-linux_920.tgz', hide='both', pty=True, watchers=[sudopass]) # Hide redundant sudo prompt
         print("Splunk_TA_nix installed.")
         c.sudo('chown splunk:splunk /opt/splunk/etc/deployment-apps/Splunk_TA_nix', hide='both', pty=True, watchers=[sudopass]) # Hide redundant sudo prompt
@@ -35,10 +36,11 @@ def install_TA_nix(c):
 
 @task
 def install_deployment_apps(c):
+    tgz_path = pathlib.Path.home().joinpath("Downloads")
     for pkg in apps['app']:
         if c.run(f'test -d /opt/splunk/etc/deployment-apps/{pkg}', warn=True).failed:
             print(f"{pkg} not found in deployment-apps.")
-            c.put(f'../{(apps['app'][pkg]['filename'])}', '/tmp')
+            c.put(f'{tgz_path}/{(apps['app'][pkg]['filename'])}', '/tmp') # note the / here since pathlib strips trailing slashes
             c.sudo(f'tar -C /opt/splunk/etc/deployment-apps -xzf /tmp/{(apps['app'][pkg]['filename'])}', hide='both', pty=True, watchers=[sudopass]) # Hide redundant sudo prompt
             print(f"App {pkg} Installed in deployment-apps.")
             c.sudo(f'chown splunk:splunk /opt/splunk/etc/deployment-apps/{pkg} ', hide='both', pty=True, watchers=[sudopass]) # Hide redundant sudo prompt
