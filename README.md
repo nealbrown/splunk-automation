@@ -46,6 +46,11 @@ On the splunk client host, either a UF or HF:
 ./splunk set deploy-poll deployment-server.example.com:8089
 ```
 
+<h3>CI/CD</h3>
+
+Tested on Gitlab (Free) with SSH Key for Fabric and Splunk Password passed via Env Vars 
+(which Gitlab cannot mask see https://gitlab.com/gitlab-org/gitlab/-/issues/220187)
+
 ***
 
 <h2>Usage</h2>
