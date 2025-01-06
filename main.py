@@ -151,9 +151,9 @@ def create_all_serverclasses(
         # Create our list of allowlist entries
         # TODO add a denylist option
         # TODO improve this dict construction 
-        # We get the clients to add to the serverclass from the toml file with the index as the key 
+        # We get the clients to add to the serverclass from the toml file with the index as the value 
         servers_from_toml = {key: client for client, key in enumerate(apps['app'][pkg]['servers'])}
-        # then we reverse the dict to get the index as the value
+        # then we reverse the dict to get the index as the key
         inv_map_servers = {client: key for key, client in servers_from_toml.items()}
         prefix = "whitelist." # This is the default prefix for allowlists in the Splunk API
         # We build the allowlist dict from the reversed dict with the prefix required by the API
@@ -204,7 +204,7 @@ def add_host_to_serverclass(
     """
     r = requests.post("https://" + host + ":8089" + "/servicesNS/nobody/search/deployment/server/serverclasses/" + serverclass,
         headers = { 'Authorization': ('Splunk %s' %session_key)},
-        data={list : client }, verify=False)
+        data={ list : client }, verify=False)
     print("Add Host: " + r.text)
 
 @serverclass_app.command()
@@ -245,7 +245,6 @@ def add_hosts_to_serverclasses(
         name = dom.getElementsByTagName('title')
         if name:
             for n in name[1:]: # We have to skip the top level "serverclasses" element
-                # TODO add another loop here to iterate over multiple host globs
                 print(f"Host(s) {allowlists} [bold]Added to Serverclass[/bold]: " + " ".join(t.nodeValue for t in n.childNodes if t.nodeType == t.TEXT_NODE))
 
 @deploymentapps_app.command()
