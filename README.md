@@ -19,9 +19,25 @@ Splunk Docs on CI/CD (Github)
 
 ***
 
-Usage
+Prerequisites
 
-On the splunk client host, either a UF or HF: `./splunk set deploy-poll deployment-server.example.com:8089`
+Usable local python install: check via `python -v` or `python3 -v`. `venv` recommended.
+
+Tested on Python `3.9` (Ubuntu 22LTS) and `3.12/3.13` (Current at time of writing).  Note that we use `tomli` since `tomllib` was not added until after `3.9`.  Untested on `< 3.9`.
+
+For docker use a bind mount to mount the repo into the `python` container via
+```
+docker run -it --mount type=bind,source=".",target="/code" --entrypoint bash python
+```
+
+On the splunk client host, either a UF or HF: 
+```
+./splunk set deploy-poll deployment-server.example.com:8089
+```
+
+***
+
+Usage
 
 ```
 export SPLUNK_HOST=deployment-server.example.com
