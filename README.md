@@ -33,7 +33,7 @@ docker run -it --mount type=bind,source=".",target="/code" --entrypoint bash pyt
 ```
 
 Running the fabric app tgz deploy will require ssh access to the target so may need a further mount for the ssh key
-`--mount type=bind,source="/home/user/.ssh",target="/code/.ssh"` 
+`--mount type=bind,source="/home/user/.ssh",target="/root/.ssh"` 
 
 On <b>Windows</b> see https://github.com/nealbrown/devops-windows/blob/main/docker-entrypoint.sh for ensuring proper perms on the key in the container.
 
@@ -68,6 +68,8 @@ Clients that check in will pull their apps based on matching any allowlist (what
 ***
 
 <h3>Known Issues</h3>
+
+If an app is simply <b>missing</b> on the deployment server (doesn't exist in `deployment-apps`, potentially due to Fabric failing) the serverclass will still be created and <b>no error will be raised</b>, but no clients will deploy the app regardless of the allowlist configured for the serverclass.
 
 Note that the Splunk REST API does not create the typical `/opt/splunk/etc/system/local/serverclass.conf` as one would create manually per the docs, but instead `/opt/splunk/etc/apps/search/local/serverclass.conf`:
 
