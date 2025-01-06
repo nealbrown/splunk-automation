@@ -35,9 +35,9 @@ docker run -it --mount type=bind,source=".",target="/code" --entrypoint bash pyt
 Running the fabric app tgz deploy will require ssh access to the target so may need a further mount for the ssh key
 `--mount type=bind,source="/home/user/.ssh",target="/root/.ssh"` 
 
-On <b>Windows</b> see https://github.com/nealbrown/devops-windows/blob/main/docker-entrypoint.sh for ensuring proper perms on the key in the container.
+On <b>Windows</b> see https://github.com/nealbrown/devops-windows/blob/main/docker-entrypoint.sh for ensuring proper perms on the key in the container and https://github.com/nealbrown/devops-windows/blob/main/docker-ps.ps1#L25C33-L25C54 for Windows pathing.
 
-and access to the tgzs from within the container: `--mount type=bind,source="/home/user/path-to-tgzs",target="/"
+And access to the tgzs from within the container: `--mount type=bind,source="/home/user/Downloads",target="/root/Downloads"
 
 <h3>Remote</h3>
 
@@ -59,7 +59,7 @@ Tested on Gitlab (Free) with SSH Key for Fabric and Splunk Password passed via E
 export SPLUNK_HOST=deployment-server.example.com
 export SPLUNK_USER=splunkadmin                              # defaults to 'admin'
 export SPLUNK_PASSWORD=changeme                             # if not set, will prompt interactively
-fab --hosts splunk install-deployment-apps                  # will copy tgzs from parent dir onto deploymentserver and unpack into deployment-apps
+fab --hosts splunk install-deployment-apps                  # will copy tgzs from parent dir onto deploymentserver and unpack into deployment-apps, assumes tgzs in ~/Downloads
 python main.py serverclass create-all-serverclasses         # creates all serverclasses including allowlists found in config/file.toml default splunkapps.toml
 python main.py deploymentapps add-all-serverclasses-to-app  # add serverclasses to apps under forwarder management on the deployment server
 ```
