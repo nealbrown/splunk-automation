@@ -1,5 +1,5 @@
 # splunk-automation
-Python REST API calls for Splunk
+<h1>Python REST API calls for Splunk</h1>
 
 Specifically addressing missing features in the Splunk Terraform provider such as managing deployment apps on a Splunk deployment server.  
 
@@ -19,9 +19,11 @@ Splunk Docs on CI/CD (Github)
 
 ***
 
-Prerequisites
+<h2>Prerequisites</h2>
 
-Usable local python install: check via `python -v` or `python3 -v`. `venv` recommended.
+<h3>Local</h3>
+
+<b>Usable local python install: check via `python -v` or `python3 -v`. `venv` recommended.</b>
 
 Tested on Python `3.9` (Ubuntu 22LTS) and `3.12/3.13` (Current at time of writing).  Note that we use `tomli` since `tomllib` was not added until after `3.9`.  Untested on `< 3.9`.
 
@@ -30,6 +32,15 @@ For docker use a bind mount to mount the repo into the `python` container via
 docker run -it --mount type=bind,source=".",target="/code" --entrypoint bash python
 ```
 
+Running the fabric app tgz deploy will require ssh access to the target so may need a further mount for the ssh key
+`--mount type=bind,source="/home/user/.ssh",target="/code/.ssh"` 
+
+On <b>Windows</b> see https://github.com/nealbrown/devops-windows/blob/main/docker-entrypoint.sh for ensuring proper perms on the key in the container.
+
+and access to the tgzs from within the container: `--mount type=bind,source="/home/user/path-to-tgzs",target="/"
+
+<h3>Remote</h3>
+
 On the splunk client host, either a UF or HF: 
 ```
 ./splunk set deploy-poll deployment-server.example.com:8089
@@ -37,7 +48,7 @@ On the splunk client host, either a UF or HF:
 
 ***
 
-Usage
+<h2>Usage</h2>
 
 ```
 export SPLUNK_HOST=deployment-server.example.com
@@ -50,6 +61,8 @@ python main.py deploymentapps add-all-serverclasses-to-app  # add serverclasses 
 Clients that check in will pull their apps based on matching any allowlist (what splunk calls a whitelist) entry
 
 ***
+
+<h3>Known Issues</h3>
 
 Note that the Splunk REST API does not create the typical `/opt/splunk/etc/system/local/serverclass.conf` as one would create manually per the docs, but instead `/opt/splunk/etc/apps/search/local/serverclass.conf`:
 
