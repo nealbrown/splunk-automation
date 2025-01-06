@@ -9,7 +9,7 @@ This project will not support features such as local apps which are available in
 
 Python fabfile for deploying apps from local host or S3 onto deployment server
 
-Typer CLI app for creating and managing serverclasses, app assignments, and client assignments, all pulled from a simple TOML inventory file.
+`Typer` CLI app for creating and managing serverclasses, app assignments, and client assignments, all pulled from a simple `TOML` inventory file.
 
 For Splunk Cloud app management see https://github.com/guilhemmarchand/splunk-cloud-automation/tree/main/manage-apps
 
@@ -80,3 +80,15 @@ whitelist.1 = splunk-hf-3
 [serverClass:Splunk_TA_windows]
 whitelist.0 = splunk-hf-2
 ```
+
+***
+
+Further Documentation
+
+
+* https://docs.splunk.com/Documentation/Splunk/9.4.0/RESTREF/RESTdeploy
+* https://docs.fabfile.org/en/stable/getting-started.html
+* https://typer.tiangolo.com/tutorial/
+* https://toml.io/en/
+* https://code.visualstudio.com/docs/containers/quickstart-python
+
