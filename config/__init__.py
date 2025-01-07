@@ -1,3 +1,4 @@
+"""Import configuration from splunkapps.toml file."""
 # __init__.py
 
 import pathlib
